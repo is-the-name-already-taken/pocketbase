@@ -47,6 +47,11 @@ jobs:
                 curl -L --output pocketbase.zip https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip
                 python3 -m zipfile -e pocketbase.zip ./
 
+                if [ $? -ne 0 ]; then
+                    echo "❌ Download failed! Please check PB_VERSION."
+                    exit 1
+                fi
+
                 chmod +x pocketbase
                 rm pocketbase.zip
             fi
