@@ -1,0 +1,55 @@
+name: Deploy
+
+on:
+#   push:
+#     branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.event.repository.name != 'service_template'
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 64280
+          script: |
+            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+
+            APP_DIR="$HOME/app/${REPO_NAME}"
+            REPO_URL="https://github.com/${OWNER}/${REPO_NAME}.git"
+            SERVICE_FILE="${REPO_NAME}.service"
+            SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+
+            if [ ! -d "$APP_DIR" ]; then
+                echo "🚀 git clone..."
+                mkdir -p ~/app
+                git clone "$REPO_URL" "$APP_DIR"
+                cd "$APP_DIR"
+            else
+                echo "🔄 git pull..."
+                cd "$APP_DIR"
+                git pull origin main
+            fi
+
+            mkdir -p "$SYSTEMD_USER_DIR"
+            ln -sf "$APP_DIR/$SERVICE_FILE" "$SYSTEMD_USER_DIR/$SERVICE_FILE"
+
+            systemctl --user daemon-reload
+            systemctl --user enable ${REPO_NAME}
+            systemctl --user restart ${REPO_NAME}
+
+            if systemctl --user is-active --quiet ${REPO_NAME}; then
+                echo "✅ Deployment Successful and Bot is Running!"
+            else
+                echo "❌ Deployment Failed: Bot is not running."
+                systemctl --user status ${REPO_NAME}
+            fi
