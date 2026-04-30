@@ -1,0 +1,17 @@
+[Unit]
+Description=pocketbase
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/app/pocketbase
+ExecStart=%h/app/pocketbase/pocketbase serve --http="127.0.0.1:8090" --dir="%h/storage/pocketbase"
+
+Restart=always
+RestartSec=5
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=pocketbase
+
+[Install]
+WantedBy=default.target

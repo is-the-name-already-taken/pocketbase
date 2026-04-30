@@ -21,18 +21,26 @@ jobs:
             REPO_NAME="${{ github.event.repository.name }}"
 
             APP_DIR="$HOME/app/${REPO_NAME}"
+            SERVICE_FILE="${REPO_NAME}.service"
+            SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+
+            if systemctl --user list-unit-files | grep -q "$SERVICE_FILE"; then
+                echo "🛑 Stopping and disabling systemd service..."
+                systemctl --user stop "$REPO_NAME"
+                systemctl --user disable "$REPO_NAME"
+                systemctl --user daemon-reload
+                systemctl --user reset-failed
+            else
+                echo "⚠️ Service $SERVICE_FILE not found, skipping..."
+            fi
+
+            if [ -L "$SYSTEMD_USER_DIR/$SERVICE_FILE" ]; then
+                echo "🔗 Removing symbolic link..."
+                rm "$SYSTEMD_USER_DIR/$SERVICE_FILE"
+            fi
 
             if [ -d "$APP_DIR" ]; then
                 echo "🚀 Removing service and app files..."
-                cd "$APP_DIR"
-
-                if [ -f "./pocketbase" ]; then
-                    sudo ./pocketbase service stop || true
-                    sudo ./pocketbase service uninstall || true
-                    echo "✅ Service uninstalled."
-                fi
-
-                cd $HOME
                 rm -rf "$APP_DIR"
                 echo "✅ App directory ($APP_DIR) removed."
             else
