@@ -27,7 +27,6 @@ jobs:
             APP_DIR="$HOME/app/${REPO_NAME}"
             REPO_URL="https://github.com/${OWNER}/${REPO_NAME}.git"
 
-            PB_VERSION=$(cat PB_VERSION)
             PB_DIR="$HOME/storage/pocketbase"
 
             if [ ! -d "$APP_DIR" ]; then
@@ -39,6 +38,14 @@ jobs:
                 echo "🔄 git pull..."
                 cd "$APP_DIR"
                 git pull origin main
+            fi
+
+            if [ -f ".env" ]; then
+                export $(grep -v '^#' .env | xargs)
+                echo "✅ .env file loaded successfully."
+            else
+                echo "⚠️ .env file not found. Please check your configuration."
+                exit 1
             fi
 
             if [ ! -f "pocketbase" ]; then
@@ -65,14 +72,6 @@ jobs:
 
             if [ -d "./pb_hooks" ] && [ "$(ls -A ./pb_hooks)" ]; then
                 cp -ru ./pb_hooks/* "$PB_DIR/pb_hooks/"
-            fi
-
-            if [ -f ".env" ]; then
-                export $(grep -v '^#' .env | xargs)
-                echo "✅ .env file loaded successfully."
-            else
-                echo "⚠️ .env file not found. Please check your configuration."
-                exit 1
             fi
 
             ./pocketbase superuser create ${SU_EMAIL} ${SU_PASSWORD} || true
